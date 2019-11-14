@@ -6,7 +6,7 @@ import com.ben.jta.model.BankAccount;
 import com.ben.jta.model.BankTransaction;
 
 @Stateless
-public class AccountHandler {
+public class StatelessAccountHandler {
 	
 	
 	

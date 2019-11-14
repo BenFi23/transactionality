@@ -20,19 +20,19 @@ import javax.xml.bind.Unmarshaller;
 
 import com.ben.jta.model.BankAccount;
 import com.ben.jta.model.BankTransaction;
-import com.ben.service.AccountHandler;
+import com.ben.service.StatelessAccountHandler;
 
 /**
  *
- * @author airhacks.com
+ * @author Ben Hunt
  */
 @Path("/bank")
 public class BankController {
 
-	private AccountHandler accountHandler;
+	private StatelessAccountHandler accountHandler;
 	
 	@Inject
-	public BankController(AccountHandler accountHandler) {
+	public BankController(StatelessAccountHandler accountHandler) {
 		this.accountHandler = accountHandler;
 	}
 
@@ -44,7 +44,6 @@ public class BankController {
     @POST
     @Consumes("application/xml")
     public Response bankTransferRequest() {
-    	
     	
     	String transactionID = "12345";
     	return Response.created(URI.create("/"+transactionID)).build();
