@@ -2,8 +2,11 @@ package com.ben.controller;
 
 import java.io.InputStream;
 import java.net.URI;
+import java.util.logging.Logger;
 
+import javax.annotation.Resource;
 import javax.inject.Inject;
+import javax.transaction.TransactionSynchronizationRegistry;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
@@ -20,14 +23,27 @@ import javax.xml.bind.Unmarshaller;
 
 import com.ben.jta.model.BankAccount;
 import com.ben.jta.model.BankTransaction;
+import com.ben.jta.utils.JtaStatus;
 import com.ben.service.StatelessAccountHandler;
 
 /**
- *
+ * REST Principles
+ * - Uniform constrained interface - Set of well defined methods (HTTP methods, GET,POST,PUT,DELETE) etc
+ * - Stateless communication - Stateless apps are easier to scale. Each request isn't affected by the previous. Follow HATEOAS
+ * - Representation oriented - Clients may (possibly) use different formats to interact with your service.
+ * - Addressable resources - You can use a URI/URL to uniquely identify every resource. Resource being a key abstraction.
+ * 
+ * 
+ *  Offers end-points to make deposits and withdrawals on a given bank account.
  * @author Ben Hunt
  */
-@Path("/bank")
+@Path("bank")
 public class BankController {
+	
+	Logger LOGGER = Logger.getLogger(BankController.class.getName());
+	
+	@Resource(lookup = "java:comp/TransactionSynchronizationRegistry")
+	TransactionSynchronizationRegistry transaction;
 
 	private StatelessAccountHandler accountHandler;
 	
@@ -38,15 +54,26 @@ public class BankController {
 
     @GET
     public String ping() {
-        return " Jakarta EE with MicroProfile 2+!";
+        return "Ping Bank " + JtaStatus.getStatus(transaction.getTransactionStatus()) +
+        		" Statless Bean JTA Status: " + accountHandler.getTransactionStatus();
     }
     
-    @POST
+    @POST @Path("deposit")
     @Consumes("application/xml")
-    public Response bankTransferRequest() {
+    public Response deposit() {
     	
     	String transactionID = "12345";
     	return Response.created(URI.create("/"+transactionID)).build();
+    }
+    
+    
+    @GET @Path("withdrawal")
+    @Produces("application/xml")
+    public StreamingOutput withdrawal(@PathParam("id") int accountID) {
+    	
+    	BankTransaction transcation = accountHandler.getTransaction(accountID);
+		return null;
+    	
     }
     
     @GET
