@@ -29,12 +29,23 @@ import com.ben.service.StatelessAccountHandler;
 /**
  * REST Principles
  * - Uniform constrained interface - Set of well defined methods (HTTP methods, GET,POST,PUT,DELETE) etc
+ * 	- Familiarity -> (Just need HTTP client), Interoperability -> (HTTP is ubiquitous), Scalability ->
  * - Stateless communication - Stateless apps are easier to scale. Each request isn't affected by the previous. Follow HATEOAS
+ * 	- Only state maintained on the server is the resources. Session data if any is stored client side. EZ Scale by adding more machines.
  * - Representation oriented - Clients may (possibly) use different formats to interact with your service.
+ * 	- How you represent your resources, BankAccount can be represented in a variety of formats, XML for Java, JSON for ajax, etc..
  * - Addressable resources - You can use a URI/URL to uniquely identify every resource. Resource being a key abstraction.
- * 
+ * - HATEOS - Provide hyperlinks in HTTP responses to drive state transitions to other services or resources
  * 
  *  Offers end-points to make deposits and withdrawals on a given bank account.
+ *  
+ *  Operations:
+ *  	GET - Bank Account information. (Imdepotent)
+ *  	GET - Ping the server, e.g. get the status of server.
+ *  	POST - Withdrawal {$1} amount of $
+ *  	POST - Transfer {$1} amount of $ to Account {$2}.
+ *  	PUT - Update account {$1} information.
+ *  
  * @author Ben Hunt
  */
 @Path("bank")
