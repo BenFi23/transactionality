@@ -6,26 +6,38 @@ docker rm -f transactions || true && docker run -d -p 8080:8080 -p 4848:4848 --n
 
 
 ### Endpoints to Demo Transcationality
-    - https://localhost:8181/jta/bank (Ping)
-	-
+
+Make deposits and withdrawals with the following endpoints to test out transactionality.
+
+
+- https://localhost:8181/transactions/bank/transaction [Ping]
+- https://localhost:8181/transactions/bank/transaction/deposit [Deposit into account]
+- https://localhost:8181/transactions/bank/transaction/withdrawal [Withdrawal from account]
+- https://localhost:8181/transactions/bank/transaction/{id} [Get info about a particular transaction]
+
 
 ### Beans Available
 ```
 // EJB
 @Stateless
-class StatelessAccountHandler{}
+class EJBAccountHandler{...}
 
 // CDI
 @RequestScoped
-class RequestedAccountHandler{
+class CDIAccountHandler{
 
     @Transactional
-    public void method(){}
+    public void deposit(BigDecimal amount){...}
 }
 
 // Plain Java Class
-class PlainAccountHandler{}
+class PlainAccountHandler{...}
 ```
+
+There is 3 types of beans, or java classes, that a Java EE developer would typically interact with. The application uses all 3 types of java beans to demonstrate the transactionality of each.
+- **EJB's** : Enterprise Java Beans (EJB 3.2, JSR 345).
+- **CDI Beans** : Contexts and Dependency Injection Beans (CDI 2.0, JSR 365).
+- **Java Beans** : Plain ole Java Objects, not managed by any IoC containers.
 
 # Why and How?
 
@@ -56,8 +68,8 @@ You can configure the transactionality of business methods by utilizing the Tran
 
 | Transcation Attribute | Foo | Bar |
 |------------------------|-----|-----|
-| **Required (Default)** | **None**| T2  |
-| **Requred (Default)** | T1 | T1 |
+| **Required (Default)** | **None**| **T2**  |
+| **Requred (Default)** | **T1** | **T1** |
 | RequiresNew | None | T2 |
 | RequiresNew | T1 | T2 |
 
@@ -89,17 +101,55 @@ class Bar {
 	}
 }
 ```
-#### Rolllling it back
-- System (Runtime) Exceptions
-- setRollbackOnly of EJBContext interface. (Injectable bean)
+#### Rolling it back
 
-Note: ApplicationExceptions, exceptions you define, do not automatically initiate a rollback.
+There way two ways for a transaction to be rolled back:
+- System/Runtime Exceptions - Developer error, implicit rollback 
+- setRollback(...) of EJBContext interface. - Developer explicitly rollsback transaction
+
+Be aware of the following scenarios:
+
+1. Application Exceptions, the exceptions you define, do not automatically initiate a rollback.
+This means if you throw and catch an exception in a part of your business logic, you need to explicity call ```ejbContext.setRollback(true);``` if you want the transcation the application error occured in to rollback. The framework will assume you can proceed gracefully with your processing unless told otherwise.
+
+2. Runtime exceptions that occur in a non-managed class invoked by a class participating in a transaction will not rollback the transcation.
+
+
+Exceptions thrown from EJB:
+```
+javax.ejb.EJBTransactionRolledbackException
+javax.ejb.TransactionRolledbackLocalException
+javax.transaction.TransactionRolledbackException
+```
+
+Clients recieving one of these exceptions know that the transcation is marked for rollback. You can't commit at this point, you should not proceed with processing.
+
 
 ### Application Managed Transactions
-There is 3 types of beans, or java classes, that a Java EE developer would typically interact with. 
-- **EJB's** : Enterprise Java Beans (EJB 3.2, JSR 345).
-- **CDI Beans** : Contexts and Dependency Injection Beans (CDI 2.0, JSR 365).
-- **Java Beans** : Plain ole Java Objects, not managed by any IoC containers.
 
-### Other Resources:
+Application Managed Transactions, also known as Bean Mangaged Transactions, must explicity
+demarcate transaction boundaries. Developers would have to obtain a reference to ```javax.transaction.UserTransaction``` through a resource injection/lookup. 
+```
+@Resource UserTransaction userTransaction;
+public void updateData() {
+// Start a transaction.
+userTransaction.begin();
+// ...
+// Perform transactional operations on data
+// Commit the transaction.
+userTransaction.commit();
+}
+```
+
+There is not a huge need to use Bean Managed Transactions for the everyday developer. One benefits of using Bean Managed Transactions is the granularity you could achieve. Bean Managed Transactions can have multiple transactions per method while Container Managed Transactions can only have 1 transaction ber business method.
+
+### Resources:
 See the Gang of Four https://www.geeksforgeeks.org/proxy-design-pattern/ for more information on the proxy pattern.
+
+JTA 1.2 Specfication: http://download.oracle.com/otn-pub/jcp/jta-1_2-mrel2-eval-spec/JTA1.2Specification.pdf
+
+CDI 2.0 JSR-365 Specification: https://docs.jboss.org/cdi/spec/2.0/cdi-spec.html#introduction
+
+Java EE 8 Tutorial on Transactions: https://javaee.github.io/tutorial/transactions.html#BNCIH
+
+EJB 3.2 JSR-345: https://download.oracle.com/otndocs/jcp/ejb-3_2-fr-spec/index.html

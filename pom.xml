@@ -35,7 +35,15 @@
 		    <artifactId>guava</artifactId>
 		    <version>19.0</version>
 		</dependency>
+		<!-- Embedded In-Memory database -->
+		<dependency>
+		    <groupId>com.h2database</groupId>
+		    <artifactId>h2</artifactId>
+		    <version>1.4.197</version>
+		    <scope>test</scope>
+		</dependency>
     </dependencies>
+    
     <build>
         <finalName>transactions</finalName>
     </build>

@@ -9,7 +9,7 @@ import com.ben.jta.model.BankTransaction;
 import com.ben.jta.utils.JtaStatus;
 
 @Stateless
-public class StatelessAccountHandler {
+public class EJBAccountHandler implements AccountHandler {
 	
 	@Resource(lookup = "java:comp/TransactionSynchronizationRegistry")
 	TransactionSynchronizationRegistry transaction;
@@ -18,7 +18,6 @@ public class StatelessAccountHandler {
 		return JtaStatus.getStatus(transaction.getTransactionStatus());
 	}
 	
-	
 	public BankTransaction getTransaction(int id) {
 		
 		return null;
@@ -26,9 +25,20 @@ public class StatelessAccountHandler {
 	
 	public BankAccount getBankAccount(int id) {
 		
-		
 		return null;
 	}
-	
+
+	@Override
+	public String deposit(BankTransaction bankTransaction) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public String withdrawal(BankTransaction bankTransaction) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
 	
 }

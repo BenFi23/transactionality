@@ -2,10 +2,12 @@ package com.ben.controller;
 
 import java.io.InputStream;
 import java.net.URI;
+import java.util.Formatter;
 import java.util.logging.Logger;
 
 import javax.annotation.Resource;
 import javax.inject.Inject;
+import javax.naming.NamingException;
 import javax.transaction.TransactionSynchronizationRegistry;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.GET;
@@ -23,8 +25,13 @@ import javax.xml.bind.Unmarshaller;
 
 import com.ben.jta.model.BankAccount;
 import com.ben.jta.model.BankTransaction;
+import com.ben.jta.model.BeanType;
 import com.ben.jta.utils.JtaStatus;
-import com.ben.service.StatelessAccountHandler;
+import com.ben.service.AccountHandler;
+import com.ben.service.CDIAccountHandler;
+import com.ben.service.EJBAccountHandler;
+import com.ben.service.PlainAccountHandler;
+import com.ben.service.factory.AccountHandlerFactory;
 
 /**
  * REST Principles
@@ -54,46 +61,69 @@ public class BankController {
 	Logger LOGGER = Logger.getLogger(BankController.class.getName());
 	
 	@Resource(lookup = "java:comp/TransactionSynchronizationRegistry")
-	TransactionSynchronizationRegistry transaction;
+	TransactionSynchronizationRegistry transactionRegistry;
 
-	private StatelessAccountHandler accountHandler;
+	private EJBAccountHandler ejbAccountHandler;
+	private CDIAccountHandler cdiAccountHandler;
+	private PlainAccountHandler plainAccountHandler;
+	private AccountHandlerFactory hanlderFactory;
 	
 	@Inject
-	public BankController(StatelessAccountHandler accountHandler) {
-		this.accountHandler = accountHandler;
+	public BankController(EJBAccountHandler accountHandler, CDIAccountHandler cdiAccountHandler, AccountHandlerFactory hanlderFactory) throws NamingException {
+		this.ejbAccountHandler = accountHandler;
+		this.cdiAccountHandler = cdiAccountHandler;
+		this.hanlderFactory = hanlderFactory;
+		plainAccountHandler = new PlainAccountHandler();
 	}
 
     @GET
-    public String ping() {
-        return "Ping Bank " + JtaStatus.getStatus(transaction.getTransactionStatus()) +
-        		" Statless Bean JTA Status: " + accountHandler.getTransactionStatus();
+    public String ping() throws NamingException {
+    	Formatter formatter  = new Formatter();
+        String response =
+        		"Ping Bank - Success - Default Transaction Status' of the following beans: \n" +
+        		formatter.format("%-12s %20s", "Bank Controller", JtaStatus.getStatus(transactionRegistry.getTransactionStatus())) + "\n" +
+        		"Statless Bean JTA Status: " + ejbAccountHandler.getTransactionStatus() + "\n" +
+        		"CDI Bean JTA Status: " + cdiAccountHandler.getTransactionStatus() + "\n" +
+        		"Plain Bean JTA Status: " + plainAccountHandler.getTransactionStatus();
+        formatter.close();
+        return response;
     }
     
     @POST @Path("deposit")
     @Consumes("application/xml")
-    public Response deposit() {
+    public Response deposit(InputStream inputStream) throws JAXBException {
     	
-    	String transactionID = "12345";
-    	return Response.created(URI.create("/"+transactionID)).build();
+    	JAXBContext jaxbContext = JAXBContext.newInstance(BankTransaction.class);
+    	Unmarshaller unmarshaller = jaxbContext.createUnmarshaller(); // xml -> java
+    	BankTransaction bankTransaction = (BankTransaction) unmarshaller.unmarshal(inputStream);
+    	
+    	LOGGER.info(String.format("Depositing $%s. Transaction Status: %s",
+    			bankTransaction.getAmount(), JtaStatus.getStatus(transactionRegistry.getTransactionStatus())));
+    	
+    	AccountHandler accountHandler;
+    	
+    	switch(bankTransaction.getBeanType()) {
+    	
+	    	case CDI: accountHandler = cdiAccountHandler;
+	    		break;
+	    	case EJB: accountHandler = ejbAccountHandler;
+	    		break;
+	    	default: accountHandler = plainAccountHandler;
+    	
+    	}
+
+    	accountHandler.deposit(bankTransaction);
+//    	AccountHandler accountHandler = hanlderFactory.createAccountHandler(BeanType.CDI);
+    	
+    	return Response.created(URI.create("/TestURI")).build();
     }
-    
     
     @GET @Path("withdrawal")
     @Produces("application/xml")
     public StreamingOutput withdrawal(@PathParam("id") int accountID) {
     	
-    	BankTransaction transcation = accountHandler.getTransaction(accountID);
+    	BankTransaction transcation = ejbAccountHandler.getTransaction(accountID);
 		return null;
-    	
-    }
-    
-    @GET
-    @Produces("application/xml")
-    public StreamingOutput getBankTransaction(@PathParam("id") int id) {
-    	
-    	BankTransaction transcation = accountHandler.getTransaction(id);
-		return null;
-    	
     }
     
     // Updates profile
@@ -101,7 +131,7 @@ public class BankController {
     @Path("{id}")
     public void updateBankAccount(@PathParam("{id}") int accountID, InputStream body) throws JAXBException {
     	
-    	BankAccount currentBankAccount = accountHandler.getBankAccount(accountID);
+    	BankAccount currentBankAccount = ejbAccountHandler.getBankAccount(accountID);
     	if(currentBankAccount == null)
     		throw new WebApplicationException(Response.Status.NOT_FOUND);
     	

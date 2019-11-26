@@ -1,0 +1,15 @@
+<persistence>
+	<persistence-unit name="jtaDemoPU">
+		<description>Manages classes depositing/withdrawing money for the JTA Demo.</description>
+		<jta-data-source>jdbc/demoSource</jta-data-source>
+		<properties>
+			<property name="javax.persistence.schema-generation.database.action"
+                 value="drop-and-create"/>
+            <property name="javax.persistence.schema-generation.create-source"
+         		 value="script"/>
+         	<property name="javax.persistence.schema-generation.create-script-source"
+                  value="META-INF/sql/create.sql" />
+		</properties>
+	</persistence-unit>
+	
+</persistence>
